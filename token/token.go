@@ -35,6 +35,7 @@ type Token struct {
 	TeamID   string
 	IssuedAt int64
 	Bearer   string
+	Callback func(oldCreatedAt, oldExpiredAt time.Time, newToken *Token)
 }
 
 // AuthKeyFromFile loads a .p8 certificate from a local file and returns a
@@ -85,6 +86,15 @@ func (t *Token) Generate() (bool, error) {
 	if t.AuthKey == nil {
 		return false, ErrAuthKeyNil
 	}
+
+	// Capture old token timing information before generating new token
+	var oldCreatedAt, oldExpiredAt time.Time
+	if t.IssuedAt != 0 {
+		oldCreatedAt = time.Unix(t.IssuedAt, 0)
+		oldExpiredAt = time.Unix(t.IssuedAt+TokenTimeout, 0)
+	}
+	// For first invocation (t.IssuedAt == 0), oldCreatedAt and oldExpiredAt will be zero values
+
 	issuedAt := time.Now().Unix()
 	jwtToken := &jwt.Token{
 		Header: map[string]interface{}{
@@ -103,5 +113,11 @@ func (t *Token) Generate() (bool, error) {
 	}
 	t.IssuedAt = issuedAt
 	t.Bearer = bearer
+
+	// Invoke callback if set, passing old timing info and entire new token
+	if t.Callback != nil {
+		t.Callback(oldCreatedAt, oldExpiredAt, t)
+	}
+
 	return true, nil
 }
