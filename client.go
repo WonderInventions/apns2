@@ -113,9 +113,16 @@ func NewClient(certificate tls.Certificate) *Client {
 //
 // As per the Apple APNs Provider API, you should keep a handle on this client
 // so that you can keep your connections with APNs open across multiple
-// notifications; don’t repeatedly open and close connections. APNs treats rapid
+// notifications; don't repeatedly open and close connections. APNs treats rapid
 // connection and disconnection as a denial-of-service attack.
-func NewTokenClient(token *token.Token) *Client {
+//
+// The optional callback parameter can be used to receive notifications when the
+// JWT token is regenerated. The callback receives the old token's created and expired times,
+// plus the entire new token. Pass nil if you don't need this functionality.
+func NewTokenClient(token *token.Token, callback func(oldCreatedAt, oldExpiredAt time.Time, newToken *token.Token)) *Client {
+	if callback != nil {
+		token.SetCallback(callback)
+	}
 	transport := &http2.Transport{
 		DialTLS:         DialTLS,
 		ReadIdleTimeout: ReadIdleTimeout,
