@@ -282,6 +282,18 @@ func TestExpirationHeader(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestExpireImmediatelyHeader(t *testing.T) {
+	n := mockNotification()
+	n.Expiration = time.Now().Add(time.Hour)
+	n.ExpireImmediately = true
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "0", r.Header.Get("apns-expiration"))
+	}))
+	defer server.Close()
+	_, err := mockClient(server.URL).Push(n)
+	assert.NoError(t, err)
+}
+
 func TestPushTypeAlertHeader(t *testing.T) {
 	n := mockNotification()
 	n.PushType = apns.PushTypeAlert
